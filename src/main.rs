@@ -1,6 +1,3 @@
-mod cyclic_list;
-use cyclic_list::CyclicList;
-
 use crossterm::event::{self, Event, KeyCode, poll};
 use ratatui::{
     DefaultTerminal, Frame,
@@ -9,7 +6,11 @@ use ratatui::{
     text::Line,
     widgets::{Block, Gauge},
 };
-use std::time::{Duration, SystemTime};
+use std::{
+    iter::{Cycle, Peekable},
+    slice::Iter,
+    time::{Duration, SystemTime},
+};
 
 fn main() {
     let terminal = ratatui::init();
@@ -18,13 +19,13 @@ fn main() {
 }
 
 fn run(mut terminal: DefaultTerminal) {
-    let mut timers = CyclicList::<Timer>::default();
-
-    timers.push_back(Timer::new("work", Duration::from_secs(3)));
-    timers.push_back(Timer::new("play", Duration::from_secs(2)));
+    let timers = vec![
+        Timer::new("work", Duration::from_secs(3)),
+        Timer::new("play", Duration::from_secs(2)),
+    ];
 
     let mut app = App {
-        timers,
+        timers: timers.iter().cycle().peekable(),
         render_interval: Duration::from_millis(50),
         state: Default::default(),
     };
@@ -32,13 +33,14 @@ fn run(mut terminal: DefaultTerminal) {
     loop {
         terminal.draw(|frame| app.render(frame)).unwrap();
 
-        let current_timer_ref = app.timers.current().unwrap();
-        let current_timer = &current_timer_ref.borrow().data;
-
         app.count();
+
+        // TODO: handle unwrap
+        let current_timer = app.timers.peek().unwrap();
+
         if app.state.elapsed >= current_timer.duration {
+            app.timers.next();
             app.state.reset();
-            app.timers.advance();
         }
 
         if let Some(act) = app.handle_events() {
@@ -54,7 +56,7 @@ enum Action {
 }
 
 struct App<'a> {
-    timers: CyclicList<Timer<'a>>,
+    timers: Peekable<Cycle<Iter<'a, Timer<'a>>>>,
     render_interval: Duration,
     state: AppState,
 }
@@ -92,9 +94,8 @@ impl Timer<'_> {
 }
 
 impl App<'_> {
-    fn render(&self, frame: &mut Frame) {
-        let current_timer_ref = self.timers.current().unwrap();
-        let current_timer = &current_timer_ref.borrow().data;
+    fn render(&mut self, frame: &mut Frame) {
+        let current_timer = self.timers.peek().unwrap();
         let time_left = current_timer.duration - self.state.elapsed;
         let elapsed_percent = u16::try_from(
             self.state.elapsed.as_millis() * 100 / current_timer.duration.as_millis(),
