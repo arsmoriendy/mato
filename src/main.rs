@@ -1,4 +1,5 @@
 use std::time::{Duration, SystemTime};
+mod cyclic_list;
 
 use crossterm::event::{self, Event, KeyCode, poll};
 use ratatui::{DefaultTerminal, Frame};
