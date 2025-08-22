@@ -80,7 +80,6 @@ impl App<'_> {
 
             self.count();
 
-            // TODO: handle unwrap
             let current_timer = self.timers.peek().unwrap();
 
             if self.state.elapsed >= current_timer.duration {
