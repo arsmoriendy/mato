@@ -1,3 +1,6 @@
+mod cli;
+
+use clap::Parser;
 use crossterm::event::{self, Event, KeyCode, poll};
 use ratatui::{
     DefaultTerminal, Frame,
@@ -13,42 +16,25 @@ use std::{
 };
 
 fn main() {
-    let terminal = ratatui::init();
-    run(terminal);
-    ratatui::restore();
-}
+    let args = cli::Cli::parse();
 
-fn run(mut terminal: DefaultTerminal) {
-    let timers = vec![
-        Timer::new("work", Duration::from_secs(3)),
-        Timer::new("play", Duration::from_secs(2)),
-    ];
+    let mut timers: Vec<Timer> = vec![];
+    for (i, name) in args.names.iter().enumerate() {
+        timers.push(Timer {
+            name,
+            duration: Duration::from_millis(args.durations[i]),
+        });
+    }
 
     let mut app = App {
         timers: timers.iter().cycle().peekable(),
-        render_interval: Duration::from_millis(50),
+        render_interval: Duration::from_millis(args.tick),
         state: Default::default(),
     };
 
-    loop {
-        terminal.draw(|frame| app.render(frame)).unwrap();
-
-        app.count();
-
-        // TODO: handle unwrap
-        let current_timer = app.timers.peek().unwrap();
-
-        if app.state.elapsed >= current_timer.duration {
-            app.timers.next();
-            app.state.reset();
-        }
-
-        if let Some(act) = app.handle_events() {
-            match act {
-                Action::Quit => break,
-            }
-        }
-    }
+    let terminal = ratatui::init();
+    app.run(terminal);
+    ratatui::restore();
 }
 
 enum Action {
@@ -87,13 +73,29 @@ struct Timer<'a> {
     duration: Duration,
 }
 
-impl Timer<'_> {
-    fn new(name: &str, duration: Duration) -> Timer<'_> {
-        Timer { name, duration }
-    }
-}
-
 impl App<'_> {
+    fn run(&mut self, mut terminal: DefaultTerminal) {
+        loop {
+            terminal.draw(|frame| self.render(frame)).unwrap();
+
+            self.count();
+
+            // TODO: handle unwrap
+            let current_timer = self.timers.peek().unwrap();
+
+            if self.state.elapsed >= current_timer.duration {
+                self.timers.next();
+                self.state.reset();
+            }
+
+            if let Some(act) = self.handle_events() {
+                match act {
+                    Action::Quit => break,
+                }
+            }
+        }
+    }
+
     fn render(&mut self, frame: &mut Frame) {
         let current_timer = self.timers.peek().unwrap();
         let time_left = current_timer.duration - self.state.elapsed;
