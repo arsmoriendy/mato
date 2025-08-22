@@ -2,7 +2,13 @@ mod cyclic_list;
 use cyclic_list::CyclicList;
 
 use crossterm::event::{self, Event, KeyCode, poll};
-use ratatui::{DefaultTerminal, Frame};
+use ratatui::{
+    DefaultTerminal, Frame,
+    layout::{Constraint, Flex, Layout},
+    style::Stylize,
+    text::Line,
+    widgets::{Block, Gauge},
+};
 use std::time::{Duration, SystemTime};
 
 fn main() {
@@ -89,13 +95,47 @@ impl App<'_> {
     fn render(&self, frame: &mut Frame) {
         let current_timer_ref = self.timers.current().unwrap();
         let current_timer = &current_timer_ref.borrow().data;
-        frame.render_widget(
-            format!(
-                "{}\t: {:?}/{:?}",
-                current_timer.name, self.state.elapsed, current_timer.duration,
-            ),
-            frame.area(),
+        let time_left = current_timer.duration - self.state.elapsed;
+        let elapsed_percent = u16::try_from(
+            self.state.elapsed.as_millis() * 100 / current_timer.duration.as_millis(),
         )
+        .unwrap();
+
+        // main
+        let timer_name_line = Line::from(vec![current_timer.name.into()]).centered();
+        let elapsed_line = Line::from(vec![
+            "Elapsed: ".into(),
+            format!("{:?}", self.state.elapsed).into(),
+            format!("/{:?}", current_timer.duration).gray(),
+        ]);
+        let time_left_line = Line::from(vec![
+            "Time Left: ".into(),
+            format!("{:?}", time_left).into(),
+        ])
+        .right_aligned();
+        let block = Block::bordered()
+            .title(timer_name_line)
+            .title_bottom(elapsed_line)
+            .title_bottom(time_left_line);
+        let gague = Gauge::default().percent(elapsed_percent).block(block);
+
+        // btm_rgt_area
+        let legend = Line::from(vec!["q: quit".into()]).right_aligned();
+
+        // layouts
+        let [main_area, bottom_area] =
+            Layout::vertical([Constraint::Percentage(100), Constraint::Length(1)])
+                .areas(frame.area());
+        let [_btm_lft_area, btm_rgt_area] =
+            Layout::horizontal([Constraint::Percentage(100), Constraint::Percentage(100)])
+                .flex(Flex::SpaceBetween)
+                .areas(bottom_area);
+        let [gague_area] = Layout::vertical([Constraint::Length(5)])
+            .flex(Flex::Center)
+            .areas(main_area);
+
+        frame.render_widget(gague, gague_area);
+        frame.render_widget(legend, btm_rgt_area);
     }
 
     fn count(&mut self) {
