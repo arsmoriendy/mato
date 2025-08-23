@@ -1,4 +1,5 @@
 mod cli;
+mod helpers;
 
 use clap::Parser;
 use crossterm::event::{self, Event, KeyCode, poll};
@@ -6,7 +7,7 @@ use ratatui::{
     DefaultTerminal, Frame,
     layout::{Constraint, Flex, Layout},
     style::Stylize,
-    text::Line,
+    text::{Line, Span},
     widgets::{Block, Gauge},
 };
 use std::{
@@ -14,6 +15,8 @@ use std::{
     slice::Iter,
     time::{Duration, SystemTime},
 };
+
+use crate::helpers::IsoDur;
 
 fn main() {
     let args = cli::Cli::parse();
@@ -105,16 +108,13 @@ impl App<'_> {
 
         // main
         let timer_name_line = Line::from(vec![current_timer.name.into()]).centered();
-        let elapsed_line = Line::from(vec![
-            "Elapsed: ".into(),
-            format!("{:?}", self.state.elapsed).into(),
-            format!("/{:?}", current_timer.duration).gray(),
-        ]);
-        let time_left_line = Line::from(vec![
-            "Time Left: ".into(),
-            format!("{:?}", time_left).into(),
-        ])
-        .right_aligned();
+        let elapsed_line = Line::default()
+            + Span::raw("Elapsed: ")
+            + IsoDur::from(&self.state.elapsed)
+            + " / ".dark_gray()
+            + IsoDur::from(&current_timer.duration);
+        let time_left_line =
+            (Line::default() + Span::raw("Time Left: ") + IsoDur::from(&time_left)).right_aligned();
         let block = Block::bordered()
             .title(timer_name_line)
             .title_bottom(elapsed_line)
