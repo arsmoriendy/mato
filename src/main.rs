@@ -151,7 +151,15 @@ impl App<'_> {
             .title(cycle_line)
             .title_bottom(elapsed_line)
             .title_bottom(time_left_line);
-        let gague = Gauge::default().percent(elapsed_percent).block(block);
+        let gague = Gauge::default()
+            .percent(elapsed_percent)
+            .use_unicode(true)
+            .gauge_style(if self.state.paused {
+                Color::Red
+            } else {
+                Color::Green
+            })
+            .block(block);
 
         // btm_rgt_area
         let legend = Line::from(vec!["q: quit p/<Space>: play/pause".into()]).right_aligned();
