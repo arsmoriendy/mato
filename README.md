@@ -1,5 +1,6 @@
 ###### TODO
 
-- cycle count and limit
 - config files
 - notify
+- prev, next, pause keybimds
+- prev, next indicator

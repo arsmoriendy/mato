@@ -16,10 +16,10 @@ use std::{
     time::{Duration, SystemTime},
 };
 
-use crate::helpers::IsoDur;
+use crate::{cli::Cli, helpers::IsoDur};
 
 fn main() {
-    let args = cli::Cli::parse();
+    let args = Cli::parse();
 
     let mut timers: Vec<Timer> = vec![];
     for (i, name) in args.names.iter().enumerate() {
@@ -30,6 +30,7 @@ fn main() {
     }
 
     let mut app = App {
+        args: &args,
         timers: timers.iter().cycle().peekable(),
         render_interval: Duration::from_millis(args.tick),
         state: Default::default(),
@@ -45,6 +46,7 @@ enum Action {
 }
 
 struct App<'a> {
+    args: &'a Cli,
     timers: Peekable<Cycle<Iter<'a, Timer<'a>>>>,
     render_interval: Duration,
     state: AppState,
@@ -53,10 +55,11 @@ struct App<'a> {
 struct AppState {
     start: SystemTime,
     elapsed: Duration,
+    cycles: u64,
 }
 
 impl AppState {
-    fn reset(&mut self) {
+    fn reset_timer(&mut self) {
         self.start = SystemTime::now();
         self.elapsed = Duration::ZERO;
     }
@@ -67,6 +70,7 @@ impl Default for AppState {
         Self {
             start: SystemTime::now(),
             elapsed: Duration::ZERO,
+            cycles: 0,
         }
     }
 }
@@ -79,6 +83,9 @@ struct Timer<'a> {
 
 impl App<'_> {
     fn run(&mut self, mut terminal: DefaultTerminal) {
+        // used to anchor cycles
+        let first_timer_ref = *self.timers.peek().unwrap();
+
         loop {
             terminal.draw(|frame| self.render(frame)).unwrap();
 
@@ -88,7 +95,14 @@ impl App<'_> {
 
             if self.state.elapsed >= current_timer.duration {
                 self.timers.next();
-                self.state.reset();
+                self.state.reset_timer();
+                if std::ptr::eq(*self.timers.peek().unwrap(), first_timer_ref) {
+                    self.state.cycles += 1;
+                    // break on cycle limit (if specified)
+                    if self.args.cycles != 0 && self.state.cycles >= self.args.cycles {
+                        break;
+                    }
+                }
             }
 
             if let Some(act) = self.handle_events() {
@@ -109,6 +123,8 @@ impl App<'_> {
 
         // main
         let timer_name_line = Line::from(vec![current_timer.name.into()]).centered();
+        let cycle_line =
+            (Line::raw("Cycles: ") + format!("{}", self.state.cycles).yellow()).right_aligned();
         let elapsed_line = Line::default()
             + Span::raw("Elapsed: ")
             + IsoDur::from(&self.state.elapsed)
@@ -118,6 +134,7 @@ impl App<'_> {
             (Line::default() + Span::raw("Time Left: ") + IsoDur::from(&time_left)).right_aligned();
         let block = Block::bordered()
             .title(timer_name_line)
+            .title(cycle_line)
             .title_bottom(elapsed_line)
             .title_bottom(time_left_line);
         let gague = Gauge::default().percent(elapsed_percent).block(block);
