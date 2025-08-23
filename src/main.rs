@@ -6,7 +6,7 @@ use crossterm::event::{self, Event, KeyCode, poll};
 use ratatui::{
     DefaultTerminal, Frame,
     layout::{Constraint, Flex, Layout},
-    style::Stylize,
+    style::{Color, Stylize},
     text::{Line, Span},
     widgets::{Block, Gauge},
 };
@@ -43,6 +43,7 @@ fn main() {
 
 enum Action {
     Quit,
+    PlayPause,
 }
 
 struct App<'a> {
@@ -53,6 +54,7 @@ struct App<'a> {
 }
 
 struct AppState {
+    paused: bool,
     start: SystemTime,
     elapsed: Duration,
     cycles: u64,
@@ -63,11 +65,16 @@ impl AppState {
         self.start = SystemTime::now();
         self.elapsed = Duration::ZERO;
     }
+
+    fn toggle_pause(&mut self) {
+        self.paused = !self.paused
+    }
 }
 
 impl Default for AppState {
     fn default() -> Self {
         Self {
+            paused: false,
             start: SystemTime::now(),
             elapsed: Duration::ZERO,
             cycles: 0,
@@ -108,6 +115,7 @@ impl App<'_> {
             if let Some(act) = self.handle_events() {
                 match act {
                     Action::Quit => break,
+                    Action::PlayPause => self.state.toggle_pause(),
                 }
             }
         }
@@ -122,6 +130,11 @@ impl App<'_> {
         .unwrap();
 
         // main
+        let paused_line = if self.state.paused {
+            Line::styled("Paused", Color::LightRed)
+        } else {
+            Line::default()
+        };
         let timer_name_line = Line::from(vec![current_timer.name.into()]).centered();
         let cycle_line =
             (Line::raw("Cycles: ") + format!("{}", self.state.cycles).yellow()).right_aligned();
@@ -133,6 +146,7 @@ impl App<'_> {
         let time_left_line =
             (Line::default() + Span::raw("Time Left: ") + IsoDur::from(&time_left)).right_aligned();
         let block = Block::bordered()
+            .title(paused_line)
             .title(timer_name_line)
             .title(cycle_line)
             .title_bottom(elapsed_line)
@@ -140,7 +154,7 @@ impl App<'_> {
         let gague = Gauge::default().percent(elapsed_percent).block(block);
 
         // btm_rgt_area
-        let legend = Line::from(vec!["q: quit".into()]).right_aligned();
+        let legend = Line::from(vec!["q: quit p/<Space>: play/pause".into()]).right_aligned();
 
         // layouts
         let [main_area, bottom_area] =
@@ -159,7 +173,11 @@ impl App<'_> {
     }
 
     fn count(&mut self) {
-        self.state.elapsed = self.state.start.elapsed().unwrap();
+        if self.state.paused {
+            self.state.start = SystemTime::now() - self.state.elapsed;
+        } else {
+            self.state.elapsed = self.state.start.elapsed().unwrap();
+        }
     }
 
     fn handle_events(&self) -> Option<Action> {
@@ -168,6 +186,7 @@ impl App<'_> {
         {
             return match key.code {
                 KeyCode::Char('q') => Some(Action::Quit),
+                KeyCode::Char(' ') | KeyCode::Char('p') => Some(Action::PlayPause),
                 _ => None,
             };
         }
