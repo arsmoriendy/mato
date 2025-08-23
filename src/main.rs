@@ -25,7 +25,7 @@ fn main() {
     for (i, name) in args.names.iter().enumerate() {
         timers.push(Timer {
             name,
-            duration: Duration::from_millis(args.durations[i]),
+            duration: Duration::from_secs(args.durations[i] * 60),
         });
     }
 
@@ -71,6 +71,7 @@ impl Default for AppState {
     }
 }
 
+#[derive(Debug)]
 struct Timer<'a> {
     name: &'a str,
     duration: Duration,
