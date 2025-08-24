@@ -2,5 +2,5 @@
 
 - config files
 - notify
-- prev, next keybimds
+- prev keybind
 - prev, next indicator

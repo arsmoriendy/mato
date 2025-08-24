@@ -44,6 +44,7 @@ fn main() {
 enum Action {
     Quit,
     PlayPause,
+    Next,
 }
 
 struct App<'a> {
@@ -116,7 +117,19 @@ impl App<'_> {
                 match act {
                     Action::Quit => break,
                     Action::PlayPause => self.state.toggle_pause(),
-                }
+                    Action::Next => {
+                        // TODO: this is the same as line 105-113
+                        self.timers.next();
+                        self.state.reset_timer();
+                        if std::ptr::eq(*self.timers.peek().unwrap(), first_timer_ref) {
+                            self.state.cycles += 1;
+                            // break on cycle limit (if specified)
+                            if self.args.cycles != 0 && self.state.cycles >= self.args.cycles {
+                                break;
+                            }
+                        }
+                    }
+                };
             }
         }
     }
@@ -162,7 +175,8 @@ impl App<'_> {
             .block(block);
 
         // btm_rgt_area
-        let legend = Line::from(vec!["q: quit p/<Space>: play/pause".into()]).right_aligned();
+        let legend =
+            Line::from(vec!["q: quit p/<Space>: play/pause ]: next".into()]).right_aligned();
 
         // layouts
         let [main_area, bottom_area] =
@@ -195,6 +209,7 @@ impl App<'_> {
             return match key.code {
                 KeyCode::Char('q') => Some(Action::Quit),
                 KeyCode::Char(' ') | KeyCode::Char('p') => Some(Action::PlayPause),
+                KeyCode::Char(']') => Some(Action::Next),
                 _ => None,
             };
         }
