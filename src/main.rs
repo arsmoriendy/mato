@@ -11,6 +11,7 @@ use ratatui::{
     widgets::{Block, Gauge},
 };
 use std::{
+    collections::HashMap,
     iter::{Cycle, Peekable},
     slice::Iter,
     time::{Duration, SystemTime},
@@ -33,7 +34,8 @@ fn main() {
         args: &args,
         timers: timers.iter().cycle().peekable(),
         render_interval: Duration::from_millis(args.tick),
-        state: Default::default(),
+        state: AppState::default(),
+        keymaps: Keymaps::default(),
     };
 
     let terminal = ratatui::init();
@@ -41,10 +43,27 @@ fn main() {
     ratatui::restore();
 }
 
+#[derive(Debug)]
 enum Action {
     Quit,
     PlayPause,
     Next,
+}
+
+struct Keymaps(HashMap<KeyCode, Action>);
+
+impl Default for Keymaps {
+    fn default() -> Self {
+        use Action::*;
+        use KeyCode::Char;
+
+        Self(HashMap::from([
+            (Char('q'), Quit),
+            (Char(']'), Next),
+            (Char('p'), PlayPause),
+            (Char(' '), PlayPause),
+        ]))
+    }
 }
 
 struct App<'a> {
@@ -52,6 +71,7 @@ struct App<'a> {
     timers: Peekable<Cycle<Iter<'a, Timer<'a>>>>,
     render_interval: Duration,
     state: AppState,
+    keymaps: Keymaps,
 }
 
 struct AppState {
@@ -175,8 +195,21 @@ impl App<'_> {
             .block(block);
 
         // btm_rgt_area
-        let legend =
-            Line::from(vec!["q: quit p/<Space>: play/pause ]: next".into()]).right_aligned();
+        let keymaps_line = Line::from(
+            self.keymaps
+                .0
+                .iter()
+                .map(|(kc, act)| {
+                    [
+                        kc.to_string().cyan(),
+                        ": ".into(),
+                        format!("{:?} ", act).into(),
+                    ]
+                })
+                .flatten()
+                .collect::<Vec<Span>>(),
+        )
+        .right_aligned();
 
         // layouts
         let [main_area, bottom_area] =
@@ -191,7 +224,7 @@ impl App<'_> {
             .areas(main_area);
 
         frame.render_widget(gague, gague_area);
-        frame.render_widget(legend, btm_rgt_area);
+        frame.render_widget(keymaps_line, btm_rgt_area);
     }
 
     fn count(&mut self) {
@@ -202,16 +235,11 @@ impl App<'_> {
         }
     }
 
-    fn handle_events(&self) -> Option<Action> {
+    fn handle_events(&self) -> Option<&Action> {
         if poll(self.render_interval).unwrap()
             && let Event::Key(key) = event::read().unwrap()
         {
-            return match key.code {
-                KeyCode::Char('q') => Some(Action::Quit),
-                KeyCode::Char(' ') | KeyCode::Char('p') => Some(Action::PlayPause),
-                KeyCode::Char(']') => Some(Action::Next),
-                _ => None,
-            };
+            return self.keymaps.0.get(&key.code);
         }
         None
     }
