@@ -71,9 +71,15 @@ impl<'a> App<'a> {
     fn from_args(args: &'a Cli) -> Self {
         let mut timers: Vec<Timer> = vec![];
         for (i, name) in args.names.iter().enumerate() {
+            let duration = args
+                .durations
+                .get(i)
+                .expect(format!("\"{}\" has no specified duration", name).as_str())
+                * 60;
+
             timers.push(Timer {
                 name,
-                duration: Duration::from_secs(args.durations[i] * 60),
+                duration: Duration::from_secs(duration),
             });
         }
 
