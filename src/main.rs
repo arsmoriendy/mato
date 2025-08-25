@@ -12,8 +12,6 @@ use ratatui::{
 };
 use std::{
     collections::HashMap,
-    iter::{Cycle, Peekable},
-    slice::Iter,
     time::{Duration, SystemTime},
 };
 
@@ -32,7 +30,7 @@ fn main() {
 
     let mut app = App {
         args: &args,
-        timers: timers.iter().cycle().peekable(),
+        timers: timers,
         render_interval: Duration::from_millis(args.tick),
         state: AppState::default(),
         keymaps: Keymaps::default(),
@@ -68,13 +66,14 @@ impl Default for Keymaps {
 
 struct App<'a> {
     args: &'a Cli,
-    timers: Peekable<Cycle<Iter<'a, Timer<'a>>>>,
+    timers: Vec<Timer<'a>>,
     render_interval: Duration,
     state: AppState,
     keymaps: Keymaps,
 }
 
 struct AppState {
+    current_timer_idx: usize,
     paused: bool,
     start: SystemTime,
     elapsed: Duration,
@@ -95,6 +94,7 @@ impl AppState {
 impl Default for AppState {
     fn default() -> Self {
         Self {
+            current_timer_idx: 0,
             paused: false,
             start: SystemTime::now(),
             elapsed: Duration::ZERO,
@@ -111,51 +111,33 @@ struct Timer<'a> {
 
 impl App<'_> {
     fn run(&mut self, mut terminal: DefaultTerminal) {
-        // used to anchor cycles
-        let first_timer_ref = *self.timers.peek().unwrap();
-
         loop {
+            if self.args.cycles != 0 && self.state.cycles >= self.args.cycles {
+                break;
+            }
+
             terminal.draw(|frame| self.render(frame)).unwrap();
 
             self.count();
 
-            let current_timer = self.timers.peek().unwrap();
+            let current_timer = self.current_timer();
 
             if self.state.elapsed >= current_timer.duration {
-                self.timers.next();
-                self.state.reset_timer();
-                if std::ptr::eq(*self.timers.peek().unwrap(), first_timer_ref) {
-                    self.state.cycles += 1;
-                    // break on cycle limit (if specified)
-                    if self.args.cycles != 0 && self.state.cycles >= self.args.cycles {
-                        break;
-                    }
-                }
+                self.advance_timer();
             }
 
             if let Some(act) = self.handle_events() {
                 match act {
                     Action::Quit => break,
                     Action::PlayPause => self.state.toggle_pause(),
-                    Action::Next => {
-                        // TODO: this is the same as line 105-113
-                        self.timers.next();
-                        self.state.reset_timer();
-                        if std::ptr::eq(*self.timers.peek().unwrap(), first_timer_ref) {
-                            self.state.cycles += 1;
-                            // break on cycle limit (if specified)
-                            if self.args.cycles != 0 && self.state.cycles >= self.args.cycles {
-                                break;
-                            }
-                        }
-                    }
+                    Action::Next => self.advance_timer(),
                 };
             }
         }
     }
 
     fn render(&mut self, frame: &mut Frame) {
-        let current_timer = self.timers.peek().unwrap();
+        let current_timer = self.current_timer();
         let time_left = current_timer.duration - self.state.elapsed;
         let elapsed_percent = u16::try_from(
             self.state.elapsed.as_millis() * 100 / current_timer.duration.as_millis(),
@@ -225,6 +207,23 @@ impl App<'_> {
 
         frame.render_widget(gague, gague_area);
         frame.render_widget(keymaps_line, btm_rgt_area);
+    }
+
+    fn current_timer<'a>(&'a self) -> &'a Timer<'a> {
+        &self.timers[self.state.current_timer_idx]
+    }
+
+    fn advance_timer(&mut self) {
+        self.state.current_timer_idx = if self.state.current_timer_idx >= self.timers.len() - 1 {
+            0
+        } else {
+            self.state.current_timer_idx + 1
+        };
+
+        self.state.reset_timer();
+        if self.state.current_timer_idx == 0 {
+            self.state.cycles += 1;
+        }
     }
 
     fn count(&mut self) {
