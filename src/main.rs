@@ -19,26 +19,7 @@ use crate::{cli::Cli, helpers::IsoDur};
 
 fn main() {
     let args = Cli::parse();
-
-    let mut timers: Vec<Timer> = vec![];
-    for (i, name) in args.names.iter().enumerate() {
-        timers.push(Timer {
-            name,
-            duration: Duration::from_secs(args.durations[i] * 60),
-        });
-    }
-
-    let mut app = App {
-        args: &args,
-        timers: timers,
-        render_interval: Duration::from_millis(args.tick),
-        keymaps: Keymaps::default(),
-        current_timer_idx: 0,
-        paused: false,
-        start: SystemTime::now(),
-        elapsed: Duration::ZERO,
-        cycles: 0,
-    };
+    let mut app = App::from_args(&args);
 
     let terminal = ratatui::init();
     app.run(terminal);
@@ -86,7 +67,29 @@ struct Timer<'a> {
     duration: Duration,
 }
 
-impl App<'_> {
+impl<'a> App<'a> {
+    fn from_args(args: &'a Cli) -> Self {
+        let mut timers: Vec<Timer> = vec![];
+        for (i, name) in args.names.iter().enumerate() {
+            timers.push(Timer {
+                name,
+                duration: Duration::from_secs(args.durations[i] * 60),
+            });
+        }
+
+        App {
+            args,
+            timers,
+            render_interval: Duration::from_millis(args.tick),
+            keymaps: Keymaps::default(),
+            current_timer_idx: 0,
+            paused: false,
+            start: SystemTime::now(),
+            elapsed: Duration::ZERO,
+            cycles: 0,
+        }
+    }
+
     fn run(&mut self, mut terminal: DefaultTerminal) {
         loop {
             if self.args.cycles != 0 && self.cycles >= self.args.cycles {
@@ -185,7 +188,7 @@ impl App<'_> {
         frame.render_widget(keymaps_line, btm_rgt_area);
     }
 
-    fn current_timer<'a>(&'a self) -> &'a Timer<'a> {
+    fn current_timer(&'a self) -> &'a Timer<'a> {
         &self.timers[self.current_timer_idx]
     }
 
