@@ -3,6 +3,7 @@ mod helpers;
 
 use clap::Parser;
 use crossterm::event::{self, Event, KeyCode, poll};
+use notify_rust::Notification;
 use ratatui::{
     DefaultTerminal, Frame,
     layout::{Constraint, Flex, Layout},
@@ -106,10 +107,18 @@ impl<'a> App<'a> {
 
             self.count();
 
-            let current_timer = self.current_timer();
+            if self.elapsed >= self.current_timer().duration {
+                let ntf_sum = format!("\"{}\" has ended.", self.current_timer().name);
 
-            if self.elapsed >= current_timer.duration {
                 self.advance_timer();
+
+                let ntf_body = format!("Started \"{}\"", self.current_timer().name);
+
+                Notification::new()
+                    .summary(&ntf_sum)
+                    .body(&ntf_body)
+                    .show()
+                    .ok();
             }
 
             if let Some(act) = self.handle_events() {
