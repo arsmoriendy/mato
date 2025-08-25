@@ -9,7 +9,7 @@ use ratatui::{
     layout::{Constraint, Flex, Layout},
     style::{Color, Stylize},
     text::{Line, Span},
-    widgets::{Block, Gauge},
+    widgets::{Block, Gauge, Tabs},
 };
 use std::{
     collections::HashMap,
@@ -140,11 +140,10 @@ impl<'a> App<'a> {
 
         // main
         let paused_line = if self.paused {
-            Line::styled("Paused", Color::LightRed)
+            Line::styled("Paused", Color::LightRed).centered()
         } else {
             Line::default()
         };
-        let timer_name_line = Line::from(vec![current_timer.name.into()]).centered();
         let cycle_line =
             (Line::raw("Cycles: ") + format!("{}", self.cycles).yellow()).right_aligned();
         let elapsed_line = Line::default()
@@ -156,7 +155,6 @@ impl<'a> App<'a> {
             (Line::default() + Span::raw("Time Left: ") + IsoDur::from(&time_left)).right_aligned();
         let block = Block::bordered()
             .title(paused_line)
-            .title(timer_name_line)
             .title(cycle_line)
             .title_bottom(elapsed_line)
             .title_bottom(time_left_line);
@@ -169,6 +167,12 @@ impl<'a> App<'a> {
                 Color::Green
             })
             .block(block);
+        let tabs = Tabs::new(
+            // get timer names
+            self.timers.iter().map(|t| t.name).collect::<Vec<&str>>(),
+        )
+        .divider("->")
+        .select(self.current_timer_idx);
 
         // btm_rgt_area
         let keymaps_line = Line::from(
@@ -195,10 +199,12 @@ impl<'a> App<'a> {
             Layout::horizontal([Constraint::Percentage(100), Constraint::Percentage(100)])
                 .flex(Flex::SpaceBetween)
                 .areas(bottom_area);
-        let [gague_area] = Layout::vertical([Constraint::Length(5)])
-            .flex(Flex::Center)
-            .areas(main_area);
+        let [tabs_area, gague_area] =
+            Layout::vertical([Constraint::Length(1), Constraint::Length(5)])
+                .flex(Flex::Center)
+                .areas(main_area);
 
+        frame.render_widget(tabs, tabs_area);
         frame.render_widget(gague, gague_area);
         frame.render_widget(keymaps_line, btm_rgt_area);
     }
