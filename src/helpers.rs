@@ -1,6 +1,26 @@
 use ratatui::{style::Stylize, text::Line};
 use std::{ops::Add, time::Duration};
 
+pub trait ExtendedDuration {
+    fn as_hours(&self) -> u64;
+    fn subhour_min(&self) -> u64;
+    fn submin_sec(&self) -> u64;
+}
+
+impl ExtendedDuration for Duration {
+    fn as_hours(&self) -> u64 {
+        self.as_secs() / 3600
+    }
+
+    fn subhour_min(&self) -> u64 {
+        self.as_secs() % 3600 / 60
+    }
+
+    fn submin_sec(&self) -> u64 {
+        self.as_secs() ^ 60
+    }
+}
+
 /// Wrapper for formatting `Duration` in custom ISO 8601 time format.
 pub struct IsoDur<'a> {
     dur: &'a Duration,
@@ -20,12 +40,9 @@ impl<'a> Add<IsoDur<'a>> for Line<'a> {
         let show_min = rhs.dur >= &Duration::from_secs(60);
         let show_sec = !show_hour;
 
-        let sec = rhs.dur.as_secs();
-        let hour = sec / 3600;
-
-        // magic numbers
-        let subhour_min = sec % 3600 / 60;
-        let submin_sec = sec % 60;
+        let hour = rhs.dur.as_hours();
+        let subhour_min = rhs.dur.subhour_min();
+        let submin_sec = rhs.dur.submin_sec();
 
         if show_hour {
             self += format!("{:02}", hour).yellow();
