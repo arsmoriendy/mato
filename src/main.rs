@@ -32,8 +32,12 @@ fn main() {
         args: &args,
         timers: timers,
         render_interval: Duration::from_millis(args.tick),
-        state: AppState::default(),
         keymaps: Keymaps::default(),
+        current_timer_idx: 0,
+        paused: false,
+        start: SystemTime::now(),
+        elapsed: Duration::ZERO,
+        cycles: 0,
     };
 
     let terminal = ratatui::init();
@@ -68,39 +72,12 @@ struct App<'a> {
     args: &'a Cli,
     timers: Vec<Timer<'a>>,
     render_interval: Duration,
-    state: AppState,
     keymaps: Keymaps,
-}
-
-struct AppState {
     current_timer_idx: usize,
     paused: bool,
     start: SystemTime,
     elapsed: Duration,
     cycles: u64,
-}
-
-impl AppState {
-    fn reset_timer(&mut self) {
-        self.start = SystemTime::now();
-        self.elapsed = Duration::ZERO;
-    }
-
-    fn toggle_pause(&mut self) {
-        self.paused = !self.paused
-    }
-}
-
-impl Default for AppState {
-    fn default() -> Self {
-        Self {
-            current_timer_idx: 0,
-            paused: false,
-            start: SystemTime::now(),
-            elapsed: Duration::ZERO,
-            cycles: 0,
-        }
-    }
 }
 
 #[derive(Debug)]
@@ -112,7 +89,7 @@ struct Timer<'a> {
 impl App<'_> {
     fn run(&mut self, mut terminal: DefaultTerminal) {
         loop {
-            if self.args.cycles != 0 && self.state.cycles >= self.args.cycles {
+            if self.args.cycles != 0 && self.cycles >= self.args.cycles {
                 break;
             }
 
@@ -122,14 +99,14 @@ impl App<'_> {
 
             let current_timer = self.current_timer();
 
-            if self.state.elapsed >= current_timer.duration {
+            if self.elapsed >= current_timer.duration {
                 self.advance_timer();
             }
 
             if let Some(act) = self.handle_events() {
                 match act {
                     Action::Quit => break,
-                    Action::PlayPause => self.state.toggle_pause(),
+                    Action::PlayPause => self.toggle_pause(),
                     Action::Next => self.advance_timer(),
                 };
             }
@@ -138,24 +115,23 @@ impl App<'_> {
 
     fn render(&mut self, frame: &mut Frame) {
         let current_timer = self.current_timer();
-        let time_left = current_timer.duration - self.state.elapsed;
-        let elapsed_percent = u16::try_from(
-            self.state.elapsed.as_millis() * 100 / current_timer.duration.as_millis(),
-        )
-        .unwrap();
+        let time_left = current_timer.duration - self.elapsed;
+        let elapsed_percent =
+            u16::try_from(self.elapsed.as_millis() * 100 / current_timer.duration.as_millis())
+                .unwrap();
 
         // main
-        let paused_line = if self.state.paused {
+        let paused_line = if self.paused {
             Line::styled("Paused", Color::LightRed)
         } else {
             Line::default()
         };
         let timer_name_line = Line::from(vec![current_timer.name.into()]).centered();
         let cycle_line =
-            (Line::raw("Cycles: ") + format!("{}", self.state.cycles).yellow()).right_aligned();
+            (Line::raw("Cycles: ") + format!("{}", self.cycles).yellow()).right_aligned();
         let elapsed_line = Line::default()
             + Span::raw("Elapsed: ")
-            + IsoDur::from(&self.state.elapsed)
+            + IsoDur::from(&self.elapsed)
             + " / ".dark_gray()
             + IsoDur::from(&current_timer.duration);
         let time_left_line =
@@ -169,7 +145,7 @@ impl App<'_> {
         let gague = Gauge::default()
             .percent(elapsed_percent)
             .use_unicode(true)
-            .gauge_style(if self.state.paused {
+            .gauge_style(if self.paused {
                 Color::Red
             } else {
                 Color::Green
@@ -210,27 +186,27 @@ impl App<'_> {
     }
 
     fn current_timer<'a>(&'a self) -> &'a Timer<'a> {
-        &self.timers[self.state.current_timer_idx]
+        &self.timers[self.current_timer_idx]
     }
 
     fn advance_timer(&mut self) {
-        self.state.current_timer_idx = if self.state.current_timer_idx >= self.timers.len() - 1 {
+        self.current_timer_idx = if self.current_timer_idx >= self.timers.len() - 1 {
             0
         } else {
-            self.state.current_timer_idx + 1
+            self.current_timer_idx + 1
         };
 
-        self.state.reset_timer();
-        if self.state.current_timer_idx == 0 {
-            self.state.cycles += 1;
+        self.reset_timer();
+        if self.current_timer_idx == 0 {
+            self.cycles += 1;
         }
     }
 
     fn count(&mut self) {
-        if self.state.paused {
-            self.state.start = SystemTime::now() - self.state.elapsed;
+        if self.paused {
+            self.start = SystemTime::now() - self.elapsed;
         } else {
-            self.state.elapsed = self.state.start.elapsed().unwrap();
+            self.elapsed = self.start.elapsed().unwrap();
         }
     }
 
@@ -241,5 +217,14 @@ impl App<'_> {
             return self.keymaps.0.get(&key.code);
         }
         None
+    }
+
+    fn reset_timer(&mut self) {
+        self.start = SystemTime::now();
+        self.elapsed = Duration::ZERO;
+    }
+
+    fn toggle_pause(&mut self) {
+        self.paused = !self.paused
     }
 }
