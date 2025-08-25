@@ -17,7 +17,7 @@ impl ExtendedDuration for Duration {
     }
 
     fn submin_sec(&self) -> u64 {
-        self.as_secs() ^ 60
+        self.as_secs() % 60
     }
 }
 
