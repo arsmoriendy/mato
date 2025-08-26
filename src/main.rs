@@ -58,9 +58,10 @@ impl Default for Keymaps {
 struct App<'a> {
     args: &'a Cli,
     timers: Vec<Timer<'a>>,
+    current_timer_idx: usize,
     render_interval: Duration,
     keymaps: Keymaps,
-    current_timer_idx: usize,
+    // states
     paused: bool,
     start: SystemTime,
     elapsed: Duration,
@@ -113,17 +114,24 @@ impl<'a> App<'a> {
             self.count();
 
             if self.elapsed >= self.current_timer().duration {
-                let ntf_sum = format!("\"{}\" has ended.", self.current_timer().name);
-
                 self.next_timer();
 
-                let ntf_body = format!("Started \"{}\"", self.current_timer().name);
+                if !self.args.no_notify {
+                    let prev_timer = &self.timers[if self.current_timer_idx == 0 {
+                        self.timers.len() - 1
+                    } else {
+                        self.current_timer_idx - 1
+                    }];
 
-                Notification::new()
-                    .summary(&ntf_sum)
-                    .body(&ntf_body)
-                    .show()
-                    .ok();
+                    let ntf_sum = format!("\"{}\" has ended.", prev_timer.name);
+                    let ntf_body = format!("Started \"{}\"", self.current_timer().name);
+
+                    Notification::new()
+                        .summary(&ntf_sum)
+                        .body(&ntf_body)
+                        .show()
+                        .ok();
+                }
             }
 
             if let Some(act) = self.handle_events() {
