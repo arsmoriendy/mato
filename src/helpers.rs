@@ -42,7 +42,7 @@ impl<'a> Add<IsoDur<'a>> for Line<'a> {
 
         let show_hour = rhs.dur >= &Duration::from_secs(60 * 60);
         let show_min = rhs.dur >= &Duration::from_secs(60) && subhour_min > 0;
-        let show_sec = !show_hour && submin_sec > 0;
+        let show_sec = !show_hour && (submin_sec > 0 || !show_min);
 
         if show_hour {
             self += format!("{}h", hour).yellow();
