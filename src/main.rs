@@ -32,6 +32,7 @@ enum Action {
     Quit,
     PlayPause,
     Next,
+    Prev,
 }
 
 struct Keymaps(HashMap<KeyCode, Action>);
@@ -43,6 +44,7 @@ impl Default for Keymaps {
 
         Self(HashMap::from([
             (Char('q'), Quit),
+            (Char('['), Prev),
             (Char(']'), Next),
             (Char('p'), PlayPause),
             (Char(' '), PlayPause),
@@ -110,7 +112,7 @@ impl<'a> App<'a> {
             if self.elapsed >= self.current_timer().duration {
                 let ntf_sum = format!("\"{}\" has ended.", self.current_timer().name);
 
-                self.advance_timer();
+                self.next_timer();
 
                 let ntf_body = format!("Started \"{}\"", self.current_timer().name);
 
@@ -125,7 +127,8 @@ impl<'a> App<'a> {
                 match act {
                     Action::Quit => break,
                     Action::PlayPause => self.toggle_pause(),
-                    Action::Next => self.advance_timer(),
+                    Action::Next => self.next_timer(),
+                    Action::Prev => self.prev_timer(),
                 };
             }
         }
@@ -219,7 +222,7 @@ impl<'a> App<'a> {
         &self.timers[self.current_timer_idx]
     }
 
-    fn advance_timer(&mut self) {
+    fn next_timer(&mut self) {
         self.current_timer_idx = if self.current_timer_idx >= self.timers.len() - 1 {
             0
         } else {
@@ -227,8 +230,25 @@ impl<'a> App<'a> {
         };
 
         self.reset_timer();
+
+        // when reaching first timer, increment cycle
         if self.current_timer_idx == 0 {
             self.cycles += 1;
+        }
+    }
+
+    fn prev_timer(&mut self) {
+        self.current_timer_idx = if self.current_timer_idx <= 0 {
+            self.timers.len() - 1
+        } else {
+            self.current_timer_idx - 1
+        };
+
+        self.reset_timer();
+
+        // when reaching last timer, decrement cycle, with a limit of 0
+        if self.current_timer_idx == self.timers.len() - 1 && self.cycles > 0 {
+            self.cycles -= 1;
         }
     }
 
