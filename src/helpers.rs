@@ -36,25 +36,22 @@ impl<'a> Add<IsoDur<'a>> for Line<'a> {
     type Output = Line<'a>;
 
     fn add(mut self, rhs: IsoDur<'a>) -> Self::Output {
-        let show_hour = rhs.dur >= &Duration::from_secs(60 * 60);
-        let show_min = rhs.dur >= &Duration::from_secs(60);
-        let show_sec = !show_hour;
-
         let hour = rhs.dur.as_hours();
         let subhour_min = rhs.dur.subhour_min();
         let submin_sec = rhs.dur.submin_sec();
 
+        let show_hour = rhs.dur >= &Duration::from_secs(60 * 60);
+        let show_min = rhs.dur >= &Duration::from_secs(60) && subhour_min > 0;
+        let show_sec = !show_hour && submin_sec > 0;
+
         if show_hour {
-            self += format!("{:02}", hour).yellow();
-            self += "h".dark_gray();
+            self += format!("{}h", hour).yellow();
         }
         if show_min {
-            self += format!("{:02}", subhour_min).cyan();
-            self += "m".dark_gray();
+            self += format!("{}m", subhour_min).cyan();
         }
         if show_sec {
-            self += format!("{:02}", submin_sec).blue();
-            self += "s".dark_gray();
+            self += format!("{}s", submin_sec).blue();
         }
 
         self
