@@ -7,7 +7,7 @@ use notify_rust::Notification;
 use ratatui::{
     DefaultTerminal, Frame,
     layout::{Constraint, Flex, Layout},
-    style::{Color, Stylize},
+    style::{Color::*, Style, Stylize},
     text::{Line, Span},
     widgets::{Block, Gauge, Tabs},
 };
@@ -140,17 +140,13 @@ impl<'a> App<'a> {
 
         // main
         let paused_line = if self.paused {
-            Line::styled("Paused", Color::LightRed).centered()
+            Line::styled("Paused", LightRed).centered()
         } else {
             Line::default()
         };
         let cycle_line =
             (Line::raw("Cycles: ") + format!("{}", self.cycles).yellow()).right_aligned();
-        let elapsed_line = Line::default()
-            + Span::raw("Elapsed: ")
-            + IsoDur::from(&self.elapsed)
-            + " / ".dark_gray()
-            + IsoDur::from(&current_timer.duration);
+        let elapsed_line = Line::default() + Span::raw("Elapsed: ") + IsoDur::from(&self.elapsed);
         let time_left_line =
             (Line::default() + Span::raw("Time Left: ") + IsoDur::from(&time_left)).right_aligned();
         let block = Block::bordered()
@@ -161,17 +157,27 @@ impl<'a> App<'a> {
         let gague = Gauge::default()
             .percent(elapsed_percent)
             .use_unicode(true)
-            .gauge_style(if self.paused {
-                Color::Red
-            } else {
-                Color::Green
-            })
+            .gauge_style(if self.paused { Red } else { Green })
             .block(block);
         let tabs = Tabs::new(
             // get timer names
-            self.timers.iter().map(|t| t.name).collect::<Vec<&str>>(),
+            self.timers
+                .iter()
+                .enumerate()
+                .map(|(i, t)| {
+                    (Line::raw(format!("{} (", t.name))
+                        + IsoDur::from(&t.duration)
+                        + Span::raw(")"))
+                    .style(if self.current_timer_idx == i {
+                        Style::new().bg(White).fg(Black).dim()
+                    } else {
+                        Style::default()
+                    })
+                })
+                .collect::<Vec<Line>>(),
         )
         .divider("->")
+        .highlight_style(Style::default()) // HACK: override default Style::reversed()
         .select(self.current_timer_idx);
 
         // btm_rgt_area
