@@ -9,9 +9,9 @@ pub struct Cli {
     /// timer names (length must match `--durations`)
     #[arg(default_values = ["Work", "Break"], num_args(1..), short, long)]
     pub names: Vec<String>,
-    /// timer durations in minutes (length must match `--names`)
-    #[arg(default_values = ["25", "5"], num_args(1..), short, long)]
-    pub durations: Vec<u64>,
+    /// timer durations (length must match `--names`)
+    #[arg(default_values = ["25m", "5m"], num_args(1..), short, long)]
+    pub durations: Vec<String>,
     /// limit number of cycles, 0 to set no limits
     #[arg(default_value = "0", short, long)]
     pub cycles: u64,

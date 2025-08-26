@@ -5,6 +5,9 @@ pub trait ExtendedDuration {
     fn as_hours(&self) -> u64;
     fn subhour_min(&self) -> u64;
     fn submin_sec(&self) -> u64;
+    fn from_iso_str(value: &str) -> Result<Self, ()>
+    where
+        Self: Sized;
 }
 
 impl ExtendedDuration for Duration {
@@ -18,6 +21,43 @@ impl ExtendedDuration for Duration {
 
     fn submin_sec(&self) -> u64 {
         self.as_secs() % 60
+    }
+
+    fn from_iso_str(value: &str) -> Result<Self, ()> {
+        let (mut h_idx, mut m_idx, mut s_idx) = (0usize, 0usize, 0usize);
+
+        for (i, c) in value.chars().enumerate() {
+            match c {
+                'h' | 'H' => h_idx = i,
+                'm' | 'M' => m_idx = i,
+                's' | 'S' => s_idx = i,
+                _ => {}
+            }
+        }
+
+        let (mut h, mut m, mut s) = (0u64, 0u64, 0u64);
+
+        let emap = |_| ();
+
+        if h_idx != 0 {
+            h = value[0..h_idx].parse().map_err(emap)?;
+        }
+
+        let mut start_idx = if h_idx != 0 { h_idx + 1 } else { 0 };
+        if m_idx != 0 {
+            m = value[start_idx..m_idx].parse().map_err(emap)?;
+        }
+
+        if s_idx != 0 {
+            start_idx = if m_idx != 0 { m_idx + 1 } else { start_idx };
+            s = value[start_idx..s_idx].parse().map_err(emap)?;
+        }
+
+        if h == 0 && m == 0 && s == 0 {
+            return Err(());
+        }
+
+        Ok(Duration::from_secs(h * 3600 + m * 60 + s))
     }
 }
 

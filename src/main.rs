@@ -16,7 +16,10 @@ use std::{
     time::{Duration, SystemTime},
 };
 
-use crate::{cli::Cli, helpers::IsoDur};
+use crate::{
+    cli::Cli,
+    helpers::{ExtendedDuration, IsoDur},
+};
 
 fn main() {
     let args = Cli::parse();
@@ -77,12 +80,12 @@ impl<'a> App<'a> {
             let duration = args
                 .durations
                 .get(i)
-                .expect(format!("\"{}\" has no specified duration", name).as_str())
-                * 60;
+                .expect(format!("\"{}\" has no specified duration", name).as_str());
 
             timers.push(Timer {
                 name,
-                duration: Duration::from_secs(duration),
+                duration: Duration::from_iso_str(duration)
+                    .expect(format!("failed to parse duration \"{}\"", duration).as_str()),
             });
         }
 
