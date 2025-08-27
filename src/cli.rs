@@ -1,7 +1,7 @@
 use clap::Parser;
 
 #[derive(Parser)]
-#[command(version)]
+#[command(version, about)]
 pub struct Cli {
     /// TUI render interval in milliseconds
     #[arg(short, long, default_value = "1000")]

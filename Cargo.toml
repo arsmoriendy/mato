@@ -1,5 +1,6 @@
 [package]
 name = "doro"
+description = "TUI pomodoro timer"
 version = "1.0.0"
 edition = "2024"
 
