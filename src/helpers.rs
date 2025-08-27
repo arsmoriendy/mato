@@ -1,5 +1,5 @@
 use ratatui::{style::Stylize, text::Line};
-use std::{ops::Add, time::Duration};
+use std::{fmt::Display, ops::Add, time::Duration};
 
 pub trait ExtendedDuration {
     fn as_hours(&self) -> u64;
@@ -83,6 +83,22 @@ impl From<&Duration> for IsoDuration {
             m: if show_min { Some(subhour_min) } else { None },
             s: if show_sec { Some(submin_sec) } else { None },
         }
+    }
+}
+
+impl Display for IsoDuration {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if let Some(h) = self.h {
+            write!(f, "{}h", h)?;
+        }
+        if let Some(m) = self.m {
+            write!(f, "{}m", m)?;
+        }
+        if let Some(s) = self.s {
+            write!(f, "{}s", s)?;
+        }
+
+        Ok(())
     }
 }
 

@@ -123,8 +123,12 @@ impl<'a> App<'a> {
                         self.current_timer_idx - 1
                     }];
 
-                    let ntf_sum = format!("\"{}\" has ended.", prev_timer.name);
-                    let ntf_body = format!("Started \"{}\"", self.current_timer().name);
+                    let ntf_sum = format!("\"{}\" timer has ended.", prev_timer.name);
+                    let ntf_body = format!(
+                        "Started \"{}\" timer for {}",
+                        self.current_timer().name,
+                        IsoDuration::from(&self.current_timer().duration)
+                    );
 
                     Notification::new()
                         .summary(&ntf_sum)
