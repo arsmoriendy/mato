@@ -62,36 +62,42 @@ impl ExtendedDuration for Duration {
 }
 
 /// Wrapper for formatting `Duration` in custom ISO 8601 time format.
-pub struct IsoDur<'a> {
-    dur: &'a Duration,
+pub struct IsoDuration {
+    h: Option<u64>,
+    m: Option<u64>,
+    s: Option<u64>,
 }
 
-impl<'a> From<&'a Duration> for IsoDur<'a> {
-    fn from(value: &'a Duration) -> Self {
-        Self { dur: value }
+impl From<&Duration> for IsoDuration {
+    fn from(value: &Duration) -> Self {
+        let hour = value.as_hours();
+        let subhour_min = value.subhour_min();
+        let submin_sec = value.submin_sec();
+
+        let show_hour = value >= &Duration::from_secs(60 * 60);
+        let show_min = value >= &Duration::from_secs(60) && subhour_min > 0;
+        let show_sec = !show_hour && (submin_sec > 0 || !show_min);
+
+        Self {
+            h: if show_hour { Some(hour) } else { None },
+            m: if show_min { Some(subhour_min) } else { None },
+            s: if show_sec { Some(submin_sec) } else { None },
+        }
     }
 }
 
-impl<'a> Add<IsoDur<'a>> for Line<'a> {
-    type Output = Line<'a>;
+impl<'a> Add<IsoDuration> for Line<'a> {
+    type Output = Self;
 
-    fn add(mut self, rhs: IsoDur<'a>) -> Self::Output {
-        let hour = rhs.dur.as_hours();
-        let subhour_min = rhs.dur.subhour_min();
-        let submin_sec = rhs.dur.submin_sec();
-
-        let show_hour = rhs.dur >= &Duration::from_secs(60 * 60);
-        let show_min = rhs.dur >= &Duration::from_secs(60) && subhour_min > 0;
-        let show_sec = !show_hour && (submin_sec > 0 || !show_min);
-
-        if show_hour {
-            self += format!("{}h", hour).yellow();
+    fn add(mut self, rhs: IsoDuration) -> Self::Output {
+        if let Some(h) = rhs.h {
+            self += format!("{}h", h).yellow();
         }
-        if show_min {
-            self += format!("{}m", subhour_min).cyan();
+        if let Some(m) = rhs.m {
+            self += format!("{}m", m).cyan();
         }
-        if show_sec {
-            self += format!("{}s", submin_sec).blue();
+        if let Some(s) = rhs.s {
+            self += format!("{}s", s).blue();
         }
 
         self

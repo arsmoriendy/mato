@@ -18,7 +18,7 @@ use std::{
 
 use crate::{
     cli::Cli,
-    helpers::{ExtendedDuration, IsoDur},
+    helpers::{ExtendedDuration, IsoDuration},
 };
 
 fn main() {
@@ -160,9 +160,11 @@ impl<'a> App<'a> {
         };
         let cycle_line =
             (Line::raw("Cycles: ") + format!("{}", self.cycles).yellow()).right_aligned();
-        let elapsed_line = Line::default() + Span::raw("Elapsed: ") + IsoDur::from(&self.elapsed);
+        let elapsed_line =
+            Line::default() + Span::raw("Elapsed: ") + IsoDuration::from(&self.elapsed);
         let time_left_line =
-            (Line::default() + Span::raw("Time Left: ") + IsoDur::from(&time_left)).right_aligned();
+            (Line::default() + Span::raw("Time Left: ") + IsoDuration::from(&time_left))
+                .right_aligned();
         let block = Block::bordered()
             .title(paused_line)
             .title(cycle_line)
@@ -180,7 +182,7 @@ impl<'a> App<'a> {
                 .enumerate()
                 .map(|(i, t)| {
                     (Line::raw(format!("{} (", t.name))
-                        + IsoDur::from(&t.duration)
+                        + IsoDuration::from(&t.duration)
                         + Span::raw(")"))
                     .style(if self.current_timer_idx == i {
                         Style::new().bg(White).fg(Black).dim()
