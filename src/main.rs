@@ -174,6 +174,7 @@ impl<'a> App<'a> {
             .title(cycle_line)
             .title_bottom(elapsed_line)
             .title_bottom(time_left_line);
+
         let mut gague = Gauge::default()
             .percent(elapsed_percent)
             .use_unicode(true)
@@ -181,25 +182,23 @@ impl<'a> App<'a> {
         if self.paused {
             gague = gague.gauge_style(Red);
         }
+
         let tabs = Tabs::new(
             // get timer names
-            self.timers
-                .iter()
-                .enumerate()
-                .map(|(i, t)| {
-                    (Line::raw(format!("{} (", t.name))
-                        + IsoDuration::from(&t.duration)
-                        + Span::raw(")"))
-                    .style(if self.current_timer_idx == i {
-                        Style::new().bg(White).fg(Black).dim()
+            self.timers.iter().enumerate().map(|(i, t)| {
+                Line::default()
+                    + Span::raw(format!(" {} ", t.name)).style(if i == self.current_timer_idx {
+                        Style::default().reversed()
                     } else {
                         Style::default()
                     })
-                })
-                .collect::<Vec<Line>>(),
+                    + Span::raw(" (")
+                    + IsoDuration::from(&t.duration)
+                    + Span::raw(")")
+            }),
         )
-        .divider("->")
-        .highlight_style(Style::default()) // HACK: override default Style::reversed()
+        .style(Style::new().dim())
+        .highlight_style(Style::new().not_dim()) // HACK: override default Style::reversed()
         .select(self.current_timer_idx);
 
         let keymaps_line = Line::from(

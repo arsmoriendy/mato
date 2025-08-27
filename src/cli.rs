@@ -9,7 +9,7 @@ pub struct Cli {
     /// Timer names (length must match `--durations`)
     #[arg(default_values = ["Work", "Break"], num_args(1..), short, long)]
     pub names: Vec<String>,
-    /// Timer durations (length must match `--names`)
+    /// Timer durations in ISO 8601 (length must match `--names`)
     #[arg(default_values = ["25m", "5m"], num_args(1..), short, long)]
     pub durations: Vec<String>,
     /// Limit number of cycles, 0 to set no limits
