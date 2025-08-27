@@ -200,7 +200,6 @@ impl<'a> App<'a> {
         .highlight_style(Style::default()) // HACK: override default Style::reversed()
         .select(self.current_timer_idx);
 
-        // btm_rgt_area
         let keymaps_line = Line::from(
             self.keymaps
                 .0
@@ -217,14 +216,22 @@ impl<'a> App<'a> {
         )
         .right_aligned();
 
+        let meta_line = Line::from(format!(
+            "{} {}",
+            env!("CARGO_PKG_NAME"),
+            env!("CARGO_PKG_VERSION")
+        ));
+
         // layouts
         let [main_area, bottom_area] =
             Layout::vertical([Constraint::Percentage(100), Constraint::Length(1)])
                 .areas(frame.area());
-        let [_btm_lft_area, btm_rgt_area] =
-            Layout::horizontal([Constraint::Percentage(100), Constraint::Percentage(100)])
-                .flex(Flex::SpaceBetween)
-                .areas(bottom_area);
+        let [btm_lft_area, btm_rgt_area] = Layout::horizontal([
+            Constraint::Percentage(100),
+            Constraint::Length(keymaps_line.width().try_into().unwrap()),
+        ])
+        .flex(Flex::SpaceBetween)
+        .areas(bottom_area);
         let [tabs_area, gague_area] =
             Layout::vertical([Constraint::Length(1), Constraint::Length(5)])
                 .flex(Flex::Center)
@@ -232,6 +239,7 @@ impl<'a> App<'a> {
 
         frame.render_widget(tabs, tabs_area);
         frame.render_widget(gague, gague_area);
+        frame.render_widget(meta_line, btm_lft_area);
         frame.render_widget(keymaps_line, btm_rgt_area);
     }
 
