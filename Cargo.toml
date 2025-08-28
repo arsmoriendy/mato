@@ -3,6 +3,10 @@ name = "mato"
 description = "🍅 Yet another pomodoro TUI timer"
 version = "1.0.0"
 edition = "2024"
+license-file = "LICENSE"
+repository = "https://github.com/arsmoriendy/mato"
+keywords = ["pomodoro", "TUI", "ratatui"]
+categories = ["command-line-utilities"]
 
 [dependencies]
 clap = { version = "4.5.45", features = ["derive"] }
