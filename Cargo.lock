@@ -477,16 +477,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "doro"
-version = "1.0.0"
-dependencies = [
- "clap",
- "crossterm 0.29.0",
- "notify-rust",
- "ratatui",
-]
-
-[[package]]
 name = "either"
 version = "1.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -755,6 +745,16 @@ dependencies = [
  "objc2",
  "objc2-foundation",
  "time",
+]
+
+[[package]]
+name = "mato"
+version = "1.0.0"
+dependencies = [
+ "clap",
+ "crossterm 0.29.0",
+ "notify-rust",
+ "ratatui",
 ]
 
 [[package]]

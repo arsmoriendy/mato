@@ -1,4 +1,10 @@
-###### TODO
+🍅 Automatic TUI pomodoro timer
 
-- animated indicator
-- pomodoro long break
+![demo](./assets/demo.gif)
+
+## Features
+
+- Automatic timer advancing
+- Customizable timers
+- Cycle counts and limit
+- Desktop notifications

@@ -5,6 +5,7 @@ pub trait ExtendedDuration {
     fn as_hours(&self) -> u64;
     fn subhour_min(&self) -> u64;
     fn submin_sec(&self) -> u64;
+    /// Custom ISO 8601 time only format
     fn from_iso_str(value: &str) -> Result<Self, ()>
     where
         Self: Sized;
