@@ -77,7 +77,7 @@ impl From<&Duration> for IsoDuration {
 
         let show_hour = value >= &Duration::from_secs(60 * 60);
         let show_min = value >= &Duration::from_secs(60) && subhour_min > 0;
-        let show_sec = submin_sec > 0;
+        let show_sec = !show_min || submin_sec > 0;
 
         Self {
             h: if show_hour { Some(hour) } else { None },
