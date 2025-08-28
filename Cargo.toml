@@ -1,6 +1,6 @@
 [package]
 name = "mato"
-description = "🍅 Automatic pomodoro TUI timer"
+description = "🍅 Yet another pomodoro TUI timer"
 version = "1.0.0"
 edition = "2024"
 

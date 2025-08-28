@@ -1,7 +1,7 @@
 use clap::Parser;
 
 #[derive(Parser)]
-#[command(version, about = "Automatic pomodoro TUI timer")]
+#[command(version, about = "Pomodoro TUI timer")]
 pub struct Cli {
     /// TUI render interval in milliseconds
     #[arg(short, long, default_value_t = 1000)]
