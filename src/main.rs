@@ -1,6 +1,7 @@
 mod cli;
 mod helpers;
 
+use anyhow::{Context, Result, bail};
 use clap::Parser;
 use crossterm::event::{self, Event, KeyCode, poll};
 use notify_rust::Notification;
@@ -12,6 +13,7 @@ use ratatui::{
     widgets::{Block, Gauge, Tabs},
 };
 use std::{
+    cmp::min,
     collections::HashMap,
     time::{Duration, SystemTime},
 };
@@ -21,13 +23,15 @@ use crate::{
     helpers::{ExtendedDuration, IsoDuration},
 };
 
-fn main() {
+fn main() -> Result<()> {
     let args = Cli::parse();
-    let mut app = App::from_args(&args);
+    let mut app = App::from_args(&args)?;
 
     let terminal = ratatui::init();
     app.run(terminal);
     ratatui::restore();
+
+    Ok(())
 }
 
 #[derive(Debug)]
@@ -75,22 +79,25 @@ struct Timer<'a> {
 }
 
 impl<'a> App<'a> {
-    fn from_args(args: &'a Cli) -> Self {
+    fn from_args(args: &'a Cli) -> Result<Self> {
         let mut timers: Vec<Timer> = vec![];
-        for (i, name) in args.names.iter().enumerate() {
-            let duration = args
-                .durations
-                .get(i)
-                .expect(format!("\"{}\" has no specified duration", name).as_str());
+        for i in 0..=min(args.durations.len(), args.names.len()) - 1 {
+            let name = &args.names[i];
+            let iso_dur_str = &args.durations[i];
 
-            timers.push(Timer {
-                name,
-                duration: Duration::from_iso_str(duration)
-                    .expect(format!("failed to parse duration \"{}\"", duration).as_str()),
-            });
+            let duration = Duration::from_iso_str(iso_dur_str).context(format!(
+                "Failed parsing duration \"{}\" for timer \"{}\"",
+                iso_dur_str, name
+            ))?;
+
+            if duration == Duration::ZERO {
+                bail!("Duration for timer \"{}\" cannot be zero", name)
+            }
+
+            timers.push(Timer { name, duration });
         }
 
-        App {
+        Ok(App {
             args,
             timers,
             render_interval: Duration::from_millis(args.tick),
@@ -100,7 +107,7 @@ impl<'a> App<'a> {
             start: SystemTime::now(),
             elapsed: Duration::ZERO,
             cycles: 0,
-        }
+        })
     }
 
     fn run(&mut self, mut terminal: DefaultTerminal) {

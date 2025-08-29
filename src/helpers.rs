@@ -1,3 +1,4 @@
+use anyhow::{Context, Result, bail};
 use ratatui::{style::Stylize, text::Line};
 use std::{fmt::Display, ops::Add, time::Duration};
 
@@ -6,7 +7,7 @@ pub trait ExtendedDuration {
     fn subhour_min(&self) -> u64;
     fn submin_sec(&self) -> u64;
     /// Custom ISO 8601 time only format
-    fn from_iso_str(value: &str) -> Result<Self, ()>
+    fn from_iso_str(value: &str) -> Result<Self>
     where
         Self: Sized;
 }
@@ -24,7 +25,7 @@ impl ExtendedDuration for Duration {
         self.as_secs() % 60
     }
 
-    fn from_iso_str(value: &str) -> Result<Self, ()> {
+    fn from_iso_str(value: &str) -> Result<Self> {
         let (mut h_idx, mut m_idx, mut s_idx) = (0usize, 0usize, 0usize);
 
         for (i, c) in value.chars().enumerate() {
@@ -36,26 +37,28 @@ impl ExtendedDuration for Duration {
             }
         }
 
+        if h_idx == 0 && m_idx == 0 && s_idx == 0 {
+            bail!("Invalid duration format")
+        }
+
         let (mut h, mut m, mut s) = (0u64, 0u64, 0u64);
 
-        let emap = |_| ();
-
         if h_idx != 0 {
-            h = value[0..h_idx].parse().map_err(emap)?;
+            h = value[0..h_idx].parse().context("Failed parsing hour")?;
         }
 
         let mut start_idx = if h_idx != 0 { h_idx + 1 } else { 0 };
         if m_idx != 0 {
-            m = value[start_idx..m_idx].parse().map_err(emap)?;
+            m = value[start_idx..m_idx]
+                .parse()
+                .context("Failed parsing minutes")?;
         }
 
         if s_idx != 0 {
             start_idx = if m_idx != 0 { m_idx + 1 } else { start_idx };
-            s = value[start_idx..s_idx].parse().map_err(emap)?;
-        }
-
-        if h == 0 && m == 0 && s == 0 {
-            return Err(());
+            s = value[start_idx..s_idx]
+                .parse()
+                .context("Failed parsing seconds")?;
         }
 
         Ok(Duration::from_secs(h * 3600 + m * 60 + s))
