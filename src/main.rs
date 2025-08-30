@@ -182,10 +182,7 @@ impl<'a> App<'a> {
             .title_bottom(elapsed_line)
             .title_bottom(time_left_line);
 
-        let mut gague = Gauge::default()
-            .percent(elapsed_percent)
-            .use_unicode(true)
-            .block(block);
+        let mut gague = Gauge::default().percent(elapsed_percent).block(block);
         if self.paused {
             gague = gague.gauge_style(Red);
         }
