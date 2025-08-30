@@ -6,7 +6,7 @@ use clap::Parser;
 use notify_rust::Notification;
 use ratatui::{
     DefaultTerminal, Frame,
-    crossterm::event::{self, Event, KeyCode, poll},
+    crossterm::event::{self, Event, KeyCode, KeyEventKind, poll},
     layout::{Constraint, Flex, Layout},
     style::{Color::*, Style, Stylize},
     text::{Line, Span},
@@ -293,6 +293,7 @@ impl<'a> App<'a> {
     fn handle_events(&self) -> Option<&Action> {
         if poll(self.render_interval).unwrap()
             && let Event::Key(key) = event::read().unwrap()
+            && key.kind == KeyEventKind::Press
         {
             return self.keymaps.0.get(&key.code);
         }
