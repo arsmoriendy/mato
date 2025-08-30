@@ -3,10 +3,10 @@ mod helpers;
 
 use anyhow::{Context, Result, bail};
 use clap::Parser;
-use crossterm::event::{self, Event, KeyCode, poll};
 use notify_rust::Notification;
 use ratatui::{
     DefaultTerminal, Frame,
+    crossterm::event::{self, Event, KeyCode, poll},
     layout::{Constraint, Flex, Layout},
     style::{Color::*, Style, Stylize},
     text::{Line, Span},
